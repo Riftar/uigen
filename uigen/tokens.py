@@ -40,19 +40,32 @@ STYLES = {
         "border_strength": 0.30,
         "elev_1": "0 1px 2px rgba(0,0,0,.05)",
         "elev_2": "0 2px 6px rgba(0,0,0,.08)",
+        "elev_3": "0 4px 12px rgba(0,0,0,.10)",
+        "elev_4": "0 10px 28px rgba(0,0,0,.12)",
     },
     "material": {
         "radius": 12, "density": "normal", "saturation": 0.62,
         "border_strength": 0.18,
         "elev_1": "0 1px 3px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.10)",
         "elev_2": "0 3px 8px rgba(0,0,0,.14), 0 1px 3px rgba(0,0,0,.10)",
+        "elev_3": "0 8px 20px rgba(0,0,0,.16), 0 2px 6px rgba(0,0,0,.10)",
+        "elev_4": "0 14px 36px rgba(0,0,0,.18), 0 4px 10px rgba(0,0,0,.10)",
     },
     "harmony": {
         "radius": 20, "density": "comfortable", "saturation": 0.48,
         "border_strength": 0.22,
         "elev_1": "0 2px 10px rgba(0,0,0,.06)",
         "elev_2": "0 6px 18px rgba(0,0,0,.09)",
+        "elev_3": "0 12px 28px rgba(0,0,0,.10)",
+        "elev_4": "0 20px 44px rgba(0,0,0,.12)",
     },
+}
+
+# Universal craft constants (curated, not parameter-driven): the easing
+# curves every polished UI shares, in the open-props tradition.
+EASINGS = {
+    "ease_out": "cubic-bezier(.25,.7,.3,1)",
+    "ease_spring": "cubic-bezier(.34,1.56,.64,1)",
 }
 
 RATIOS = (1.2, 1.25, 1.333, 1.5, 1.618)
@@ -230,7 +243,20 @@ def build_tokens(params):
         "radius": {"radius": p["radius"],
                    "radius_lg": min(24, p["radius"] * 2)},
         "elevation": {"elev_1": preset["elev_1"],
-                      "elev_2": preset["elev_2"]},
+                      "elev_2": preset["elev_2"],
+                      "elev_3": preset["elev_3"],
+                      "elev_4": preset["elev_4"],
+                      "shadow_primary": "0 4px 14px rgba(%d,%d,%d,.35)" %
+                      roles["primary"]},
+        "gradient": {
+            "gradient_primary": "linear-gradient(135deg, %s, %s)" % (
+                C.css_hex(roles["primary"]),
+                C.css_hex(C.lighten(roles["primary"], 0.16) if dark
+                          else C.darken(roles["primary"], 0.16))),
+            "gradient_surface": "linear-gradient(180deg, %s, %s)" % (
+                C.css_hex(roles["surface"]), C.css_hex(roles["bg"])),
+        },
+        "easing": dict(EASINGS),
         "shadow": preset["elev_1"],
         "repairs": repairs,
     }

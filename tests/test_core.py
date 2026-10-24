@@ -48,7 +48,7 @@ class TestParams(unittest.TestCase):
         p = T.parse_params({})
         expected = dict(T.DEFAULTS)
         expected.update(T.STYLES["neutral"])  # preset fills unset styling
-        for k in ("elev_1", "elev_2", "border_strength"):
+        for k in ("elev_1", "elev_2", "elev_3", "elev_4", "border_strength"):
             expected.pop(k)
         self.assertEqual(p, expected)
 
@@ -168,6 +168,24 @@ class TestRender(unittest.TestCase):
                     "--sp-6", "--radius-lg", "--shadow", "--accent"):
             self.assertIn(var + ":", css)
         self.assertIn(self.tokens["color"]["primary"], css)
+
+    def test_craft_scales_present(self):
+        """Open-props-grade scales are generated, not vendored:
+        gradients, easings, layered shadows, colored primary shadow."""
+        t = self.tokens
+        for group, keys in (("elevation", ("elev_1", "elev_2", "elev_3",
+                                           "elev_4", "shadow_primary")),
+                            ("gradient", ("gradient_primary",
+                                          "gradient_surface")),
+                            ("easing", ("ease_out", "ease_spring"))):
+            for k in keys:
+                self.assertIn(k, t[group])
+        self.assertIn("rgba(", t["elevation"]["shadow_primary"])
+        css = R.build_css(t)
+        for var in ("--gradient-primary", "--ease-out", "--elev-3",
+                    "--shadow-primary"):
+            self.assertIn(var + ":", css)
+        self.assertIn("transition", css)  # craft: motion, not just paint
 
     def test_page_is_self_contained(self):
         page = R.build_page(self.tokens)

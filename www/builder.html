@@ -11,7 +11,7 @@
   aside { padding: 14px; overflow-y: auto; }
   #rules { border-right: 1px solid var(--border, #ddd); }
   #inspector { border-left: 1px solid var(--border, #ddd); }
-  h1 { font-size: 15px; margin: 0 0 10px; }
+  h1 { font-size: 15px; margin: 0 0 10px; font-weight: 800; letter-spacing: -.01em; }
   h2 { font-size: 12px; margin: 14px 0 6px; opacity: .7;
        text-transform: uppercase; letter-spacing: .04em; }
   label { display: block; margin: 8px 0 2px; font-size: 11px; opacity: .75; }
@@ -20,24 +20,35 @@
     background: var(--surface, #fff); color: inherit; font-size: 12px; }
   input[type=range] { width: 100%; }
   button { margin: 3px 2px 3px 0; padding: 5px 9px; font-size: 11px;
-    border: 1px solid var(--border, #ccc); border-radius: 4px;
-    background: var(--surface, #fff); color: inherit; cursor: pointer; }
-  button.primary { background: var(--primary, #26c); color: var(--on-primary, #fff);
-    border-color: transparent; }
+    border: 1px solid var(--border, #ccc); border-radius: 6px;
+    background: var(--surface, #fff); color: inherit; cursor: pointer;
+    font-weight: 600;
+    transition: transform .16s var(--ease-out, ease),
+      box-shadow .16s var(--ease-out, ease), filter .16s var(--ease-out, ease); }
+  button:hover { transform: translateY(-1px); border-color: var(--primary, #26c);
+    color: var(--primary, #26c); }
+  button.primary { background: var(--gradient-primary, var(--primary, #26c));
+    color: var(--on-primary, #fff); border-color: transparent;
+    box-shadow: var(--shadow-primary, none); }
+  button.primary:hover { filter: brightness(1.07); color: var(--on-primary, #fff); }
   #canvas { overflow-y: auto; padding: 18px; }
   #grid { display: grid; gap: var(--gap); }
-  .node { border: 1px solid var(--border, #ddd); border-radius: 8px;
+  .node { border: 1px solid var(--border, #ddd); border-radius: 10px;
     padding: 12px; background: var(--surface, #fff);
-    box-shadow: var(--elev-1, none); cursor: pointer; position: relative; }
-  .node.selected { outline: 2px solid var(--primary, #26c); outline-offset: 2px; }
+    box-shadow: var(--elev-1, none); cursor: pointer; position: relative;
+    transition: transform .18s var(--ease-out, ease), box-shadow .18s var(--ease-out, ease); }
+  .node:hover { transform: translateY(-2px); box-shadow: var(--elev-3, var(--elev-1)); }
+  .node.selected { outline: 2px solid var(--primary, #26c); outline-offset: 2px;
+    box-shadow: var(--shadow-primary, var(--elev-2, none)); }
   .node .kind { position: absolute; top: 6px; right: 8px; font-size: 9px;
     opacity: .45; font-family: ui-monospace, monospace; }
-  .n-metric .value { font-size: 26px; font-weight: 700; }
+  .n-metric .value { font-size: 27px; font-weight: 800; letter-spacing: -.02em; }
   .n-metric .desc, .n-callout p { font-size: 11px; opacity: .7; margin: 2px 0 0; }
   .n-heading h3 { margin: 0; font-size: 18px; }
   .n-bars .bars { display: flex; align-items: flex-end; gap: 4px; height: 64px;
     margin-top: 8px; }
-  .n-bars .bar { flex: 1; background: var(--primary, #26c); border-radius: 2px 2px 0 0; }
+  .n-bars .bar { flex: 1; background: var(--gradient-primary, var(--primary, #26c));
+    border-radius: 3px 3px 0 0; }
   .n-activity ul { margin: 6px 0 0; padding-left: 16px; font-size: 11px; }
   .n-activity li { margin: 2px 0; }
   .n-table table { border-collapse: collapse; width: 100%; margin-top: 6px;
