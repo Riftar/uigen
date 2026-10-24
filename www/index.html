@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>uigen playground</title>
+<style>
+  body { margin: 0; font: 14px/1.5 system-ui, sans-serif; background: #101014;
+         color: #d8d8de; display: grid; grid-template-columns: 300px 1fr;
+         height: 100vh; }
+  aside { padding: 20px; border-right: 1px solid #26262c; overflow-y: auto; }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  p.sub { color: #8a8a94; margin: 0 0 18px; font-size: 12px; }
+  label { display: block; margin: 14px 0 4px; font-size: 12px; color: #a8a8b2; }
+  input[type=range] { width: 100%; }
+  select, input[type=number] { width: 100%; background: #1a1a20; color: #d8d8de;
+    border: 1px solid #33333c; border-radius: 4px; padding: 4px 6px; }
+  .links { margin-top: 18px; font-size: 12px; }
+  a { color: #7ab0ff; }
+  iframe { border: 0; width: 100%; height: 100vh; background: #fff; }
+  #cssbtn { margin-top: 10px; width: 100%; padding: 6px; background: #26262c;
+    border: 1px solid #3a3a44; color: #d8d8de; border-radius: 4px; cursor: pointer; }
+</style>
+</head>
+<body>
+<aside>
+  <h1>uigen</h1>
+  <p class="sub">parameters in → deterministic, WCAG-gated theme out</p>
+  <label>hue <span id="hue_v"></span></label>
+  <input type="range" id="hue" min="0" max="359" value="222">
+  <label>saturation <span id="sat_v"></span></label>
+  <input type="range" id="saturation" min="0" max="100" value="62">
+  <label>harmony</label>
+  <select id="harmony">
+    <option>complementary</option><option>analogous</option><option>triadic</option>
+  </select>
+  <label>type ratio</label>
+  <select id="ratio">
+    <option>1.2</option><option selected>1.25</option><option>1.333</option>
+    <option>1.5</option><option>1.618</option>
+  </select>
+  <label>density</label>
+  <select id="density">
+    <option>compact</option><option selected>normal</option><option>comfortable</option>
+  </select>
+  <label>radius <span id="radius_v"></span></label>
+  <input type="range" id="radius" min="0" max="24" value="8">
+  <button id="cssbtn">copy tokens.css</button>
+  <div class="links"><a id="open" href="#" target="_blank">open demo page ↗</a></div>
+</aside>
+<iframe id="view"></iframe>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const inputs = ["hue", "saturation", "harmony", "ratio", "density", "radius"];
+
+function currentParams() {
+  const q = new URLSearchParams();
+  q.set("hue", $("hue").value);
+  q.set("saturation", ($("saturation").value / 100).toFixed(2));
+  q.set("harmony", $("harmony").value);
+  q.set("ratio", $("ratio").value);
+  q.set("density", $("density").value);
+  q.set("radius", $("radius").value);
+  return q;
+}
+
+function refresh() {
+  $("hue_v").textContent = $("hue").value;
+  $("sat_v").textContent = ($("saturation").value / 100).toFixed(2);
+  $("radius_v").textContent = $("radius").value + "px";
+  const q = currentParams();
+  $("view").src = "/api/page?" + q.toString();
+  $("open").href = "/api/page?" + q.toString();
+}
+
+let t = null;
+inputs.forEach(id => $(id).addEventListener("input", () => {
+  clearTimeout(t);
+  t = setTimeout(refresh, 150);
+}));
+
+$("cssbtn").addEventListener("click", () => {
+  fetch("/api/tokens.css?" + currentParams().toString())
+    .then(r => r.text())
+    .then(css => navigator.clipboard.writeText(css))
+    .then(() => { $("cssbtn").textContent = "copied ✓";
+                  setTimeout(() => $("cssbtn").textContent = "copy tokens.css", 1200); });
+});
+
+refresh();
+</script>
+</body>
+</html>
