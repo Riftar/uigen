@@ -16,6 +16,7 @@ Parameters (all optional, defaults in DEFAULTS):
   radius       0..24          corner radius in px
 """
 from . import color as C
+from . import sections as sections_mod
 
 DEFAULTS = {
     "hue": 222,
@@ -24,6 +25,33 @@ DEFAULTS = {
     "ratio": 1.25,
     "density": "normal",
     "radius": 8,
+    "style": "neutral",       # neutral | material | harmony
+    "sections": "header,hero,features,footer",
+}
+
+# Style presets shape the token MATH (parameter bundles), never copied
+# code from the systems that inspired them: neutral = shadcn-like
+# bordered minimalism; material = elevation and tonal color; harmony =
+# soft, round, comfortable.
+STYLES = {
+    "neutral": {
+        "radius": 8, "density": "normal", "saturation": 0.38,
+        "border_strength": 0.30,
+        "elev_1": "0 1px 2px rgba(0,0,0,.05)",
+        "elev_2": "0 2px 6px rgba(0,0,0,.08)",
+    },
+    "material": {
+        "radius": 12, "density": "normal", "saturation": 0.62,
+        "border_strength": 0.18,
+        "elev_1": "0 1px 3px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.10)",
+        "elev_2": "0 3px 8px rgba(0,0,0,.14), 0 1px 3px rgba(0,0,0,.10)",
+    },
+    "harmony": {
+        "radius": 20, "density": "comfortable", "saturation": 0.48,
+        "border_strength": 0.22,
+        "elev_1": "0 2px 10px rgba(0,0,0,.06)",
+        "elev_2": "0 6px 18px rgba(0,0,0,.09)",
+    },
 }
 
 RATIOS = (1.2, 1.25, 1.333, 1.5, 1.618)
@@ -45,15 +73,25 @@ CONTRAST_RULES = (
 def parse_params(query):
     """Coerce query-string-ish dict -> validated params. Raises ValueError."""
     p = dict(DEFAULTS)
+    explicit = set()
     for key, raw in query.items():
         if key not in DEFAULTS:
             raise ValueError("unknown parameter %r" % key)
+        explicit.add(key)
         if key in ("hue", "radius"):
             p[key] = int(raw)
         elif key == "saturation":
             p[key] = float(raw)
         else:
             p[key] = str(raw).lower()
+    # Style preset fills only what the caller did not set explicitly.
+    preset = STYLES.get(p["style"])
+    if preset is None:
+        raise ValueError("style must be one of %s" % (tuple(STYLES),))
+    for key in ("radius", "density", "saturation"):
+        if key not in explicit:
+            p[key] = preset[key]
+    p["sections"] = ",".join(sections_mod.normalize_sections(p["sections"]))
     if not 0 <= p["hue"] < 360:
         raise ValueError("hue must be in [0,360)")
     if not 0.0 <= p["saturation"] <= 1.0:
@@ -103,7 +141,9 @@ def build_tokens(params):
     surface = C.hsl_to_rgb(hue, min(sat, 0.16), 0.99)       # cards sit above bg
     text = C.hsl_to_rgb(hue, min(sat, 0.45), 0.13)
     text_muted = C.hsl_to_rgb(hue, min(sat, 0.30), 0.34)
-    border = C.hsl_to_rgb(hue, min(sat, 0.25), 0.74)
+    preset = STYLES[p["style"]]
+    border_l = 0.88 - preset["border_strength"] * 0.45
+    border = C.hsl_to_rgb(hue, min(sat, 0.25), border_l)
     primary = C.hsl_to_rgb(hue, sat, 0.40)
     primary_hover = C.darken(primary, 0.12)
     accent = C.hsl_to_rgb(hue2, sat, 0.42)
@@ -182,7 +222,9 @@ def build_tokens(params):
         "spacing": spacing,
         "radius": {"radius": p["radius"],
                    "radius_lg": min(24, p["radius"] * 2)},
-        "shadow": "0 1px 3px rgba(0,0,0,.10), 0 1px 2px rgba(0,0,0,.06)",
+        "elevation": {"elev_1": preset["elev_1"],
+                      "elev_2": preset["elev_2"]},
+        "shadow": preset["elev_1"],
         "repairs": repairs,
     }
     return tokens

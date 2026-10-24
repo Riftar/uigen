@@ -61,6 +61,17 @@ class TestServer(unittest.TestCase):
         self.assertIn("text/html", ctype)
         self.assertTrue(body.startswith(b"<!doctype html>"))
 
+    def test_style_and_sections_params(self):
+        status, body, _ = self.get(
+            "/api/page?style=harmony&sections=header,pricing,footer")
+        self.assertEqual(status, 200)
+        self.assertIn(b'class="tier"', body)
+        self.assertIn(b"radius: 20px", body)
+        status, _, _ = self.get("/api/page?sections=warpdrive")
+        self.assertEqual(status, 400)
+        status, _, _ = self.get("/api/page?style=brutalist")
+        self.assertEqual(status, 400)
+
     def test_bad_params_400(self):
         for bad in ("?hue=999", "?ratio=2.0", "?vibes=loud", "?harmony=nope"):
             status, _, _ = self.get("/api/tokens" + bad)

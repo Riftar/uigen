@@ -5,10 +5,13 @@ Python stdlib, the playground is one vanilla HTML file. Same
 parameters, same theme, forever — and every text/background pair it
 emits is checked against WCAG contrast before you ever see it.
 
-Parameters in (hue, saturation, harmony, type ratio, density, radius)
-→ a complete token system out: color roles derived by HSL harmony, a
-modular type scale, a spacing scale, radii — rendered as CSS custom
-properties, a JSON token file, and a live demo page.
+Parameters in (hue, saturation, harmony, type ratio, density, radius,
+style preset, page sections) → a complete system out: color roles
+derived by HSL harmony, a modular type scale, a spacing scale, radii,
+elevation — rendered as CSS custom properties, a JSON token file, and a
+composed page (header, hero, features, pricing, CTA, footer — you pick
+which). Style presets (neutral / material / harmony) shape the token
+math itself: bordered minimalism, elevation-forward, or soft-and-round.
 
 The differentiator is the gate, not the palette: when a
 harmony-derived pair fails WCAG, the engine repairs it in fixed
@@ -36,6 +39,9 @@ curl "http://127.0.0.1:8000/api/page?hue=160"                      # demo page
 - `uigen/color.py` — HSL/RGB conversion and the WCAG relative
   luminance / contrast formulas. Pure functions; this math is the
   trust boundary of the accessibility gate.
+- `uigen/sections.py` — the section model: which sections a page has
+  (canonical order, unknown names rejected), each rendered with
+  token-driven classes only.
 - `uigen/tokens.py` — the engine. Validates parameters strictly
   (unknown keys and out-of-range values are errors, not guesses),
   derives color roles from hue + harmony (complementary / analogous /
@@ -65,9 +71,10 @@ python3 -m unittest discover -s tests -v
 
 ## Status
 
-Checkpoint 1 (MVP): parameters → tokens → CSS + demo page +
-playground, with the WCAG gate. Generation is currently
-re-skinning: the same structure, any skin. Structural generation
-(layout as constraint solving) is deliberately not here yet.
+Checkpoint 1 (MVP) plus sections and style presets: parameters →
+tokens → CSS + composed page + playground, with the WCAG gate. Pages
+now vary in structure (which sections) and character (which preset);
+true structural layout generation (constraint solving) is deliberately
+not here yet.
 
 MIT license.

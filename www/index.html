@@ -45,6 +45,19 @@
   </select>
   <label>radius <span id="radius_v"></span></label>
   <input type="range" id="radius" min="0" max="24" value="8">
+  <label>style</label>
+  <select id="style">
+    <option selected>neutral</option><option>material</option><option>harmony</option>
+  </select>
+  <label>sections</label>
+  <div id="sections">
+    <label style="display:inline;margin-right:8px"><input type="checkbox" value="header" checked> header</label>
+    <label style="display:inline;margin-right:8px"><input type="checkbox" value="hero" checked> hero</label>
+    <label style="display:inline;margin-right:8px"><input type="checkbox" value="features" checked> features</label>
+    <label style="display:inline;margin-right:8px"><input type="checkbox" value="pricing"> pricing</label>
+    <label style="display:inline;margin-right:8px"><input type="checkbox" value="cta"> cta</label>
+    <label style="display:inline;margin-right:8px"><input type="checkbox" value="footer" checked> footer</label>
+  </div>
   <button id="cssbtn">copy tokens.css</button>
   <div class="links"><a id="open" href="#" target="_blank">open demo page ↗</a></div>
 </aside>
@@ -52,7 +65,10 @@
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
-const inputs = ["hue", "saturation", "harmony", "ratio", "density", "radius"];
+const inputs = ["hue", "saturation", "harmony", "ratio", "density", "radius", "style"];
+document.querySelectorAll("#sections input").forEach(cb => cb.addEventListener("input", () => {
+  clearTimeout(t); t = setTimeout(refresh, 150);
+}));
 
 function currentParams() {
   const q = new URLSearchParams();
@@ -62,6 +78,9 @@ function currentParams() {
   q.set("ratio", $("ratio").value);
   q.set("density", $("density").value);
   q.set("radius", $("radius").value);
+  q.set("style", $("style").value);
+  const secs = [...document.querySelectorAll("#sections input:checked")].map(cb => cb.value);
+  q.set("sections", secs.join(",") || "header");
   return q;
 }
 

@@ -46,11 +46,43 @@ class TestColorMath(unittest.TestCase):
 class TestParams(unittest.TestCase):
     def test_defaults_when_empty(self):
         p = T.parse_params({})
-        self.assertEqual(p, T.DEFAULTS)
+        expected = dict(T.DEFAULTS)
+        expected.update(T.STYLES["neutral"])  # preset fills unset styling
+        for k in ("elev_1", "elev_2", "border_strength"):
+            expected.pop(k)
+        self.assertEqual(p, expected)
 
     def test_unknown_key_rejected(self):
         with self.assertRaises(ValueError):
             T.parse_params({"vibes": "high"})
+
+    def test_bad_style_rejected(self):
+        with self.assertRaises(ValueError):
+            T.parse_params({"style": "brutalist"})
+
+    def test_style_preset_shapes_tokens(self):
+        base = T.build_tokens({"hue": 200})
+        mat = T.build_tokens({"hue": 200, "style": "material"})
+        har = T.build_tokens({"hue": 200, "style": "harmony"})
+        self.assertNotEqual(base["params"]["saturation"],
+                            mat["params"]["saturation"])
+        self.assertEqual(har["params"]["radius"], 20)
+        self.assertEqual(har["params"]["density"], "comfortable")
+        self.assertNotEqual(base["elevation"]["elev_1"],
+                            mat["elevation"]["elev_1"])
+
+    def test_explicit_param_beats_preset(self):
+        p = T.parse_params({"style": "harmony", "radius": 4})
+        self.assertEqual(p["radius"], 4)
+        self.assertEqual(p["density"], "comfortable")  # not explicitly set
+
+    def test_bad_section_rejected(self):
+        with self.assertRaises(ValueError):
+            T.parse_params({"sections": "header,warpdrive"})
+
+    def test_sections_canonical_order(self):
+        p = T.parse_params({"sections": "footer,hero,header"})
+        self.assertEqual(p["sections"], "header,hero,footer")
 
     def test_ranges_enforced(self):
         for bad in ({"hue": 400}, {"hue": -1}, {"saturation": "1.5"},
@@ -148,6 +180,28 @@ class TestRender(unittest.TestCase):
         page = R.build_page(self.tokens)
         self.assertIn("hue=222", page)
         self.assertIn(":1", page)
+
+    def test_default_page_has_default_sections_only(self):
+        page = R.build_page(self.tokens)
+        self.assertIn('class="nav"', page)
+        self.assertIn('class="hero"', page)
+        self.assertIn('class="feature"', page)
+        self.assertIn('class="footer"', page)
+        self.assertNotIn('class="tier"', page)
+        self.assertNotIn('class="cta-band"', page)
+
+    def test_sections_param_controls_structure(self):
+        t = T.build_tokens({"sections": "header,pricing,cta,footer"})
+        page = R.build_page(t)
+        self.assertIn('class="tier"', page)
+        self.assertIn('class="cta-band"', page)
+        self.assertNotIn('class="hero"', page)
+        self.assertNotIn('class="feature"', page)
+
+    def test_sections_deterministic(self):
+        a = R.build_page(T.build_tokens({"sections": "pricing,hero,header"}))
+        b = R.build_page(T.build_tokens({"sections": "header,hero,pricing"}))
+        self.assertEqual(a, b)
 
 
 if __name__ == "__main__":
