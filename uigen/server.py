@@ -11,6 +11,7 @@ Query params are validated by uigen.tokens.parse_params; unknown or
 out-of-range values are a 400, not a guess.
 """
 import os
+import posixpath
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
@@ -46,6 +47,14 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/":
                 with open(os.path.join(WWW, "index.html"), "rb") as f:
                     return self._send(200, f.read(), "text/html; charset=utf-8")
+            if url.path == "/api/builder":
+                from . import builder as builder_mod
+                flat, _title = _params_from(url.query)
+                try:
+                    body = builder_mod.project_json(flat).encode()
+                except ValueError as e:
+                    return self._send(400, ("bad rules: %s\n" % e).encode())
+                return self._send(200, body, "application/json")
             if url.path in ("/api/tokens", "/api/tokens.css", "/api/page"):
                 flat, title = _params_from(url.query)
                 try:
@@ -62,6 +71,21 @@ class Handler(BaseHTTPRequestHandler):
                                       "text/css; charset=utf-8")
                 return self._send(200, render_mod.build_page(t, title).encode(),
                                   "text/html; charset=utf-8")
+            # static files from www/ (basename only: no subpaths served)
+            rel = url.path.lstrip("/")
+            base = posixpath.basename(rel)
+            if rel != base:
+                return self._send(404, b"not found")
+            path = os.path.join(WWW, base)
+            if not os.path.isfile(path):
+                return self._send(404, b"not found")
+            with open(path, "rb") as f:
+                body = f.read()
+            ctype = {".html": "text/html; charset=utf-8",
+                     ".css": "text/css", ".js": "text/javascript",
+                     ".png": "image/png"}.get(os.path.splitext(base)[1],
+                                              "application/octet-stream")
+            return self._send(200, body, ctype)
             return self._send(404, b"not found")
         except BrokenPipeError:
             pass

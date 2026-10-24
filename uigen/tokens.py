@@ -26,6 +26,7 @@ DEFAULTS = {
     "density": "normal",
     "radius": 8,
     "style": "neutral",       # neutral | material | harmony
+    "mode": "light",           # light | dark
     "sections": "header,hero,features,footer",
 }
 
@@ -91,6 +92,8 @@ def parse_params(query):
     for key in ("radius", "density", "saturation"):
         if key not in explicit:
             p[key] = preset[key]
+    if p["mode"] not in ("light", "dark"):
+        raise ValueError("mode must be light or dark")
     p["sections"] = ",".join(sections_mod.normalize_sections(p["sections"]))
     if not 0 <= p["hue"] < 360:
         raise ValueError("hue must be in [0,360)")
@@ -137,16 +140,20 @@ def build_tokens(params):
     hue, sat = p["hue"], p["saturation"]
     hue2 = _harmony_hue(hue, p["harmony"])
 
-    bg = C.hsl_to_rgb(hue, min(sat, 0.12), 0.975)          # near-white tint
-    surface = C.hsl_to_rgb(hue, min(sat, 0.16), 0.99)       # cards sit above bg
-    text = C.hsl_to_rgb(hue, min(sat, 0.45), 0.13)
-    text_muted = C.hsl_to_rgb(hue, min(sat, 0.30), 0.34)
+    dark = p["mode"] == "dark"
+    # lightness plan per mode; the contrast gate repairs any pair that
+    # fails, so a dark theme carries the same WCAG guarantee as light.
+    bg = C.hsl_to_rgb(hue, min(sat, 0.12), 0.09 if dark else 0.975)
+    surface = C.hsl_to_rgb(hue, min(sat, 0.16), 0.135 if dark else 0.99)
+    text = C.hsl_to_rgb(hue, min(sat, 0.45), 0.93 if dark else 0.13)
+    text_muted = C.hsl_to_rgb(hue, min(sat, 0.30), 0.72 if dark else 0.34)
     preset = STYLES[p["style"]]
-    border_l = 0.88 - preset["border_strength"] * 0.45
+    border_l = (0.32 + preset["border_strength"] * 0.25) if dark else \
+        (0.88 - preset["border_strength"] * 0.45)
     border = C.hsl_to_rgb(hue, min(sat, 0.25), border_l)
-    primary = C.hsl_to_rgb(hue, sat, 0.40)
-    primary_hover = C.darken(primary, 0.12)
-    accent = C.hsl_to_rgb(hue2, sat, 0.42)
+    primary = C.hsl_to_rgb(hue, sat, 0.55 if dark else 0.40)
+    primary_hover = C.darken(primary, 0.12) if not dark else C.lighten(primary, 0.12)
+    accent = C.hsl_to_rgb(hue2, sat, 0.62 if dark else 0.42)
     # text-on-brand: pure black or white, whichever keeps >= contrast
     # against BOTH primary and its (darker) hover state
     b, w = (0, 0, 0), (255, 255, 255)

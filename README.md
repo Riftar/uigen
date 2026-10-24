@@ -24,7 +24,18 @@ parameter did not ask for.
 ```sh
 python3 -m uigen.server 8000
 # open http://127.0.0.1:8000/ and drag the sliders
+# open http://127.0.0.1:8000/builder.html for the procedural builder
 ```
+
+The **builder** (`www/builder.html`) is a rules-driven UI editor: pick a
+layout preset, columns, gap, item count and seed; the engine generates
+a deterministic component tree (metric, bar-chart, activity-list,
+table, callout, heading) rendered live. Click any component to edit it
+in the inspector, add or remove components, switch light/dark, save to
+localStorage, export the project as JSON — the same blueprint as an
+npm-starter version, with zero dependencies: the engine is Python
+stdlib, the renderer is an allowlisted vanilla-DOM map, theming reuses
+the WCAG-gated token engine, and validation is strict on both sides.
 
 Or without a browser:
 

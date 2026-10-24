@@ -72,6 +72,25 @@ class TestServer(unittest.TestCase):
         status, _, _ = self.get("/api/page?style=brutalist")
         self.assertEqual(status, 400)
 
+    def test_static_www_served(self):
+        status, body, ctype = self.get("/builder.html")
+        self.assertEqual(status, 200)
+        self.assertIn("text/html", ctype)
+        self.assertIn(b"uigen builder", body)
+
+    def test_no_subpath_static(self):
+        status, _, _ = self.get("/www/../uigen/server.py")
+        self.assertIn(status, (400, 404))
+
+    def test_builder_api(self):
+        status, body, ctype = self.get(
+            "/api/builder?preset=grid&columns=3&items=6&seed=7")
+        self.assertEqual(status, 200)
+        doc = json.loads(body)
+        self.assertEqual(len(doc["nodes"]), 6)
+        status, _, _ = self.get("/api/builder?items=99")
+        self.assertEqual(status, 400)
+
     def test_bad_params_400(self):
         for bad in ("?hue=999", "?ratio=2.0", "?vibes=loud", "?harmony=nope"):
             status, _, _ = self.get("/api/tokens" + bad)

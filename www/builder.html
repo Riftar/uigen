@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>uigen builder</title>
+<style>
+  body { margin: 0; font: 13px/1.5 system-ui, sans-serif; }
+  #app { display: grid; grid-template-columns: 250px 1fr 240px;
+         height: 100vh; }
+  aside { padding: 14px; overflow-y: auto; }
+  #rules { border-right: 1px solid var(--border, #ddd); }
+  #inspector { border-left: 1px solid var(--border, #ddd); }
+  h1 { font-size: 15px; margin: 0 0 10px; }
+  h2 { font-size: 12px; margin: 14px 0 6px; opacity: .7;
+       text-transform: uppercase; letter-spacing: .04em; }
+  label { display: block; margin: 8px 0 2px; font-size: 11px; opacity: .75; }
+  input[type=number], select { width: 100%; padding: 4px 6px;
+    border: 1px solid var(--border, #ccc); border-radius: 4px;
+    background: var(--surface, #fff); color: inherit; font-size: 12px; }
+  input[type=range] { width: 100%; }
+  button { margin: 3px 2px 3px 0; padding: 5px 9px; font-size: 11px;
+    border: 1px solid var(--border, #ccc); border-radius: 4px;
+    background: var(--surface, #fff); color: inherit; cursor: pointer; }
+  button.primary { background: var(--primary, #26c); color: var(--on-primary, #fff);
+    border-color: transparent; }
+  #canvas { overflow-y: auto; padding: 18px; }
+  #grid { display: grid; gap: var(--gap); }
+  .node { border: 1px solid var(--border, #ddd); border-radius: 8px;
+    padding: 12px; background: var(--surface, #fff);
+    box-shadow: var(--elev-1, none); cursor: pointer; position: relative; }
+  .node.selected { outline: 2px solid var(--primary, #26c); outline-offset: 2px; }
+  .node .kind { position: absolute; top: 6px; right: 8px; font-size: 9px;
+    opacity: .45; font-family: ui-monospace, monospace; }
+  .n-metric .value { font-size: 26px; font-weight: 700; }
+  .n-metric .desc, .n-callout p { font-size: 11px; opacity: .7; margin: 2px 0 0; }
+  .n-heading h3 { margin: 0; font-size: 18px; }
+  .n-bars .bars { display: flex; align-items: flex-end; gap: 4px; height: 64px;
+    margin-top: 8px; }
+  .n-bars .bar { flex: 1; background: var(--primary, #26c); border-radius: 2px 2px 0 0; }
+  .n-activity ul { margin: 6px 0 0; padding-left: 16px; font-size: 11px; }
+  .n-activity li { margin: 2px 0; }
+  .n-table table { border-collapse: collapse; width: 100%; margin-top: 6px;
+    font-size: 11px; }
+  .n-table td { border-top: 1px solid var(--border, #eee); padding: 3px 4px; }
+  .n-callout { border-left: 3px solid var(--primary, #26c); }
+  .node h4, .node .title { margin: 0; font-size: 12px; opacity: .8;
+    font-weight: 600; }
+  textarea { width: 100%; min-height: 48px; padding: 4px 6px; font: 11px system-ui;
+    border: 1px solid var(--border, #ccc); border-radius: 4px;
+    background: var(--surface, #fff); color: inherit; }
+  .empty { opacity: .5; font-size: 12px; padding: 8px 0; }
+  #saved { color: #2a2; font-size: 11px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="rules">
+    <h1>uigen builder</h1>
+    <p style="font-size:11px;opacity:.65;margin:0 0 8px">rules in —
+    deterministic component tree out. no npm.</p>
+    <label>preset</label>
+    <select id="preset">
+      <option value="grid" selected>grid</option>
+      <option value="stack">stack</option>
+      <option value="feature">feature</option>
+    </select>
+    <label>columns <span id="columns_v"></span></label>
+    <input type="range" id="columns" min="1" max="4" value="3">
+    <label>gap <span id="gap_v"></span></label>
+    <input type="range" id="gap" min="8" max="40" value="16">
+    <label>items <span id="items_v"></span></label>
+    <input type="range" id="items" min="3" max="12" value="6">
+    <label>seed</label>
+    <input type="number" id="seed" min="0" value="7">
+    <h2>theme</h2>
+    <label>hue <span id="hue_v"></span></label>
+    <input type="range" id="hue" min="0" max="359" value="222">
+    <select id="mode">
+      <option value="light" selected>light</option>
+      <option value="dark">dark</option>
+    </select>
+    <h2>actions</h2>
+    <button class="primary" id="regen">regenerate (seed+1)</button>
+    <button id="save">save</button> <span id="saved"></span><br>
+    <button id="export">export JSON</button>
+    <button id="load">load saved</button>
+  </aside>
+  <main id="canvas"><div id="grid"></div></main>
+  <aside id="inspector">
+    <h1>inspector</h1>
+    <div id="insp" class="empty">select a component</div>
+    <h2>add component</h2>
+    <div id="addBtns"></div>
+    <h2>remove</h2>
+    <button id="remove">remove selected</button>
+    <p class="empty" style="margin-top:14px">edits live client-side;
+    regenerate keeps nothing — that is the point of seeds.</p>
+  </aside>
+</div>
+<script>
+"use strict";
+
+const $ = id => document.getElementById(id);
+let project = null;
+let selected = null;
+
+// ---------- theme: tokens.css from the same engine ----------
+function applyTheme() {
+  $("columns_v").textContent = $("columns").value;
+  $("gap_v").textContent = $("gap").value + "px";
+  $("items_v").textContent = $("items").value;
+  $("hue_v").textContent = $("hue").value;
+  const q = "hue=" + $("hue").value + "&mode=" + $("mode").value;
+  fetch("/api/tokens.css?" + q).then(r => r.text()).then(css => {
+    let tag = document.getElementById("tokenscss");
+    if (!tag) {
+      tag = document.createElement("style"); tag.id = "tokenscss";
+      document.head.appendChild(tag);
+    }
+    tag.textContent = css;
+    document.body.style.background = "var(--bg)";
+    document.body.style.color = "var(--text)";
+    render();
+  });
+}
+
+// ---------- generation ----------
+function rulesQuery() {
+  return "preset=" + $("preset").value +
+    "&columns=" + $("columns").value +
+    "&gap=" + $("gap").value +
+    "&items=" + $("items").value +
+    "&seed=" + ($("seed").value || 0);
+}
+
+function regenerate() {
+  fetch("/api/builder?" + rulesQuery()).then(r => {
+    if (!r.ok) return r.text().then(t => { throw new Error(t); });
+    return r.json();
+  }).then(p => { project = p; selected = null; render(); })
+  .catch(e => alert("generation failed: " + e.message));
+}
+
+// ---------- allowlisted renderers (kind -> known component) ----------
+const RENDER = {
+  "heading": n => `<div class="node n-heading" data-id="${n.id}">
+    <span class="kind">${n.kind}</span><h3>${esc(n.title)}</h3></div>`,
+  "metric": n => `<div class="node n-metric" data-id="${n.id}">
+    <span class="kind">${n.kind}</span><div class="title">${esc(n.title)}</div>
+    <div class="value">${esc(n.value || "")}</div>
+    <p class="desc">${esc(n.description || "")}</p></div>`,
+  "bar-chart": n => `<div class="node n-bars" data-id="${n.id}">
+    <span class="kind">${n.kind}</span><div class="title">${esc(n.title)}</div>
+    <div class="bars">${(n.data || []).map(v =>
+      `<div class="bar" style="height:${Math.max(4, v)}%"></div>`).join("")}</div></div>`,
+  "activity-list": n => `<div class="node n-activity" data-id="${n.id}">
+    <span class="kind">${n.kind}</span><div class="title">${esc(n.title)}</div>
+    <ul>${(n.items || []).map(i => `<li>${esc(i)}</li>`).join("")}</ul></div>`,
+  "table": n => `<div class="node n-table" data-id="${n.id}">
+    <span class="kind">${n.kind}</span><div class="title">${esc(n.title)}</div>
+    <table>${(n.items || []).map(r =>
+      `<tr><td>${esc(r)}</td></tr>`).join("")}</table></div>`,
+  "callout": n => `<div class="node n-callout" data-id="${n.id}">
+    <span class="kind">${n.kind}</span><div class="title">${esc(n.title)}</div>
+    <p>${esc(n.description || "")}</p></div>`,
+};
+const KINDS = Object.keys(RENDER);  // the allowlist, one source of truth
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"]/g,
+    c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+}
+
+function render() {
+  if (!project) return;
+  const g = $("grid");
+  const r = project.rules;
+  g.style.setProperty("--gap", r.gap + "px");
+  g.style.gridTemplateColumns =
+    r.preset === "stack" ? "1fr" :
+    "repeat(" + (r.preset === "feature" ? Math.min(2, r.columns) : r.columns) +
+    ", minmax(180px, 1fr))";
+  g.innerHTML = project.nodes.map(n => {
+    const fn = RENDER[n.kind];
+    return fn ? fn(n) : "";   // unknown kind renders nothing (allowlist)
+  }).join("");
+  if (r.preset === "feature" && project.nodes[0]) {
+    const first = g.querySelector('[data-id="' + project.nodes[0].id + '"]');
+    if (first) first.style.gridColumn = "1 / -1";
+  }
+  g.querySelectorAll(".node").forEach(el =>
+    el.addEventListener("click", () => select(el.dataset.id)));
+  renderInspector();
+}
+
+// ---------- inspector ----------
+function select(id) {
+  selected = id;
+  document.querySelectorAll(".node.selected").forEach(
+    el => el.classList.remove("selected"));
+  const el = document.querySelector('[data-id="' + id + '"]');
+  if (el) el.classList.add("selected");
+  renderInspector();
+}
+function node() { return project.nodes.find(n => n.id === selected); }
+
+function renderInspector() {
+  const box = $("insp");
+  const n = node();
+  if (!n) { box.innerHTML = '<div class="empty">select a component</div>'; return; }
+  box.innerHTML = `
+    <label>kind</label><div style="font-family:ui-monospace,monospace">${n.kind}</div>
+    <label>title</label><input id="i_title" value="${esc(n.title || "")}">
+    ${n.value !== undefined ? '<label>value</label><input id="i_value" value="' + esc(n.value) + '">' : ''}
+    ${n.description !== undefined ? '<label>description</label><textarea id="i_desc">' + esc(n.description || "") + '</textarea>' : ''}
+    <label>id</label><div style="font-family:ui-monospace,monospace">${n.id}</div>`;
+  const upd = () => {
+    n.title = $("i_title").value;
+    if ($("i_value")) n.value = $("i_value").value;
+    if ($("i_desc")) n.description = $("i_desc").value;
+    render();
+    document.querySelector('[data-id="' + n.id + '"]').classList.add("selected");
+  };
+  ["i_title", "i_value", "i_desc"].forEach(id => {
+    const el = $(id);
+    if (el) el.addEventListener("input", upd);
+  });
+}
+
+// ---------- add / remove ----------
+KINDS.forEach(k => {
+  const b = document.createElement("button");
+  b.textContent = "+ " + k;
+  b.addEventListener("click", () => {
+    const id = "n" + (Date.now() % 100000);
+    const n = { id, kind: k, title: k === "heading" ? "New heading" : k };
+    if (k === "metric") { n.value = "0"; n.description = ""; }
+    if (k === "callout") n.description = "";
+    if (k === "bar-chart") n.data = [40, 65, 30, 80, 55, 70, 45, 60];
+    if (k === "activity-list" || k === "table") n.items = ["item 1", "item 2"];
+    project.nodes.push(n);
+    project.rules.items = project.nodes.length;
+    render(); select(id);
+  });
+  $("addBtns").appendChild(b);
+});
+$("remove").addEventListener("click", () => {
+  if (!selected) return;
+  if (project.nodes.length <= 3) { alert("minimum 3 components"); return; }
+  project.nodes = project.nodes.filter(n => n.id !== selected);
+  project.rules.items = project.nodes.length;
+  selected = null; render();
+});
+
+// ---------- persistence ----------
+$("regen").addEventListener("click", () => {
+  $("seed").value = (parseInt($("seed").value || "0", 10) + 1) % 2147483647;
+  regenerate();
+});
+$("save").addEventListener("click", () => {
+  localStorage.setItem("uigen-project", JSON.stringify(project));
+  $("saved").textContent = "saved ✓";
+  setTimeout(() => $("saved").textContent = "", 1200);
+});
+$("load").addEventListener("click", () => {
+  const raw = localStorage.getItem("uigen-project");
+  if (!raw) { alert("nothing saved yet"); return; }
+  try {
+    const p = JSON.parse(raw);
+    if (p.version !== 1 || !Array.isArray(p.nodes)) throw new Error("bad doc");
+    if (p.nodes.some(n => !RENDER[n.kind])) throw new Error("unknown kind");
+    project = p; selected = null;
+    $("preset").value = p.rules.preset; $("columns").value = p.rules.columns;
+    $("gap").value = p.rules.gap; $("items").value = p.rules.items;
+    $("seed").value = p.rules.seed;
+    render();
+  } catch (e) { alert("load failed: " + e.message); }
+});
+$("export").addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify(project, null, 2)],
+                        { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "uigen-project.json";
+  a.click(); URL.revokeObjectURL(a.href);
+});
+
+let ruleTimer = null;
+["preset", "columns", "gap", "items", "seed"].forEach(id =>
+  $(id).addEventListener("input", () => {
+    applyTheme();
+    clearTimeout(ruleTimer);
+    ruleTimer = setTimeout(regenerate, 200);
+  }));
+["hue", "mode"].forEach(id => $(id).addEventListener("input", applyTheme));
+
+applyTheme();
+regenerate();
+</script>
+</body>
+</html>
